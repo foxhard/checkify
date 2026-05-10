@@ -1,0 +1,176 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self'; base-uri 'self'; form-action 'none'">
+  <title>Checkify — Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/style.css">
+</head>
+<body>
+
+  <!-- PASSWORD MODAL -->
+  <div id="password-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-glass">
+      <div class="modal-header">
+        <span class="prompt-prefix">$</span>
+        <h2 id="modal-title">DECRYPT CHECKLIST</h2>
+      </div>
+      <p class="modal-hint">This checklist is password protected.</p>
+      <div class="modal-input-wrap">
+        <span class="input-prefix">▶</span>
+        <input id="modal-password" type="password" placeholder="enter passphrase..." autocomplete="off" spellcheck="false">
+      </div>
+      <div id="modal-error" class="modal-error hidden"></div>
+      <div class="modal-actions">
+        <button id="modal-submit" class="btn-primary">DECRYPT</button>
+        <button id="modal-cancel" class="btn-ghost">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY LISTS PANEL -->
+  <div id="lists-panel" class="panel hidden" role="complementary" aria-label="My checklists">
+    <div class="panel-header">
+      <span class="panel-title">MY LISTS</span>
+      <button id="lists-close" class="panel-close" aria-label="Close lists panel">×</button>
+    </div>
+    <div id="lists-container" class="lists-container"></div>
+    <div id="lists-empty" class="lists-empty hidden">
+      <p>No saved checklists yet.</p>
+    </div>
+  </div>
+
+  <!-- SHARE PANEL -->
+  <div id="share-panel" class="panel hidden" role="complementary" aria-label="Share checklist">
+    <div class="panel-header">
+      <span class="panel-title">SHARE</span>
+      <button id="share-close" class="panel-close" aria-label="Close share panel">×</button>
+    </div>
+
+    <div class="share-mode-toggle">
+      <label class="toggle-label" id="toggle-public-label">
+        <span class="toggle-icon">🌐</span> Public
+      </label>
+      <div class="toggle-switch" id="mode-toggle" role="switch" aria-checked="false" tabindex="0" title="Toggle public/protected">
+        <div class="toggle-knob"></div>
+      </div>
+      <label class="toggle-label" id="toggle-protected-label">
+        <span class="toggle-icon">🔒</span> Protected
+      </label>
+    </div>
+    <p class="share-mode-desc" id="share-mode-desc">Anyone with the link can view this checklist.</p>
+
+    <div id="passphrase-section" class="passphrase-section hidden">
+      <label class="field-label" for="share-password">Passphrase</label>
+      <div class="share-input-wrap">
+        <span class="input-prefix">▶</span>
+        <input id="share-password" type="password" placeholder="set a passphrase..." autocomplete="off" spellcheck="false">
+      </div>
+      <p id="share-passphrase-hint" class="field-hint">Enter a passphrase to enable auto-URL generation.</p>
+    </div>
+
+    <div class="url-section">
+      <div class="url-label-row">
+        <label class="field-label">Shareable URL</label>
+        <span id="share-spinner" class="share-spinner hidden" aria-label="Generating URL">⟳</span>
+      </div>
+      <textarea id="share-url" class="url-textarea" readonly rows="4" placeholder="URL will appear here..."></textarea>
+      <button id="share-copy" class="btn-primary wide">COPY LINK</button>
+      <p id="share-copy-status" class="copy-status hidden">Copied!</p>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <header class="app-header">
+      <a href="{{ site.baseurl }}/" class="logo" aria-label="Checkify home">
+        <span class="logo-bracket">[</span><span class="logo-text">CHECKIFY</span><span class="logo-bracket">]</span>
+      </a>
+      <div id="mode-badge" class="mode-badge mode-editing" aria-live="polite">EDITING</div>
+      <button id="btn-text-mode" class="btn-ghost btn-text-mode hidden" title="Switch editor mode">TEXT</button>
+      <nav class="header-actions">
+        <button id="btn-edit" class="btn-ghost" title="Edit checklist">
+          <span class="btn-label">EDIT</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l2 2L6 12H4v-2L11 3z"/><line x1="9" y1="5" x2="11" y2="7"/></svg></span>
+        </button>
+        <button id="btn-save" class="btn-primary" title="Save &amp; update link">
+          <span class="btn-label">SAVE</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,9 6,13 14,4"/></svg></span>
+        </button>
+        <button id="btn-cancel" class="btn-danger" title="Cancel editing">
+          <span class="btn-label">CANCEL</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg></span>
+        </button>
+        <button id="btn-new" class="btn-ghost" title="New checklist">
+          <span class="btn-label">NEW</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="11"/><line x1="5" y1="8" x2="11" y2="8"/></svg></span>
+        </button>
+        <button id="btn-share" class="btn-primary" title="Share this checklist">
+          <span class="btn-label">SHARE</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="1" x2="8" y2="11"/><polyline points="4,5 8,1 12,5"/><line x1="2" y1="15" x2="14" y2="15"/></svg></span>
+        </button>
+        <button id="btn-lists" class="btn-ghost" title="My checklists">
+          <span class="btn-label">LISTS</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="13" y2="4"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg></span>
+        </button>
+      </nav>
+    </header>
+
+    <div id="mode-subbar" class="mode-subbar hidden">
+      <button id="btn-text-mode-sub" class="btn-mode-sub">
+        <span class="btn-label">SWITCH TO TEXT EDITOR</span>
+        <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,4 1,8 5,12"/><polyline points="11,4 15,8 11,12"/></svg></span>
+      </button>
+    </div>
+
+    <div class="title-row" id="title-row">
+      <span
+        id="list-title"
+        class="list-title"
+        contenteditable="true"
+        spellcheck="false"
+        data-placeholder="Untitled Checklist"
+        role="heading"
+        aria-level="1"
+      ></span>
+    </div>
+
+    <div id="global-progress-row" class="global-progress-row">
+      <div class="global-progress-bar">
+        <div id="global-fill" class="global-progress-fill"></div>
+      </div>
+      <span id="global-label" class="global-progress-label">0 / 0</span>
+    </div>
+
+    <main id="tree-root" class="tree-root" role="tree" aria-label="Checklist items"></main>
+
+    <textarea id="text-editor" class="text-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Title on line 1, then one item per line&#10;  Indent children with 2 spaces&#10;- Prefix sections with a dash&#10;[x] Prefix checked items with [x]"></textarea>
+
+    <div id="empty-state" class="empty-state hidden" aria-hidden="true">
+      <pre class="ascii-box">┌─────────────────────────┐
+│   Press ENTER to add    │
+│      the first item     │
+└─────────────────────────┘</pre>
+      <p class="empty-hint">Or click <kbd>+</kbd> to add a child</p>
+    </div>
+
+    <footer id="hint-bar" class="hint-bar" aria-label="Keyboard shortcuts">
+      <kbd>Enter</kbd>&nbsp;new sibling &nbsp;·&nbsp;
+      <kbd>Tab</kbd>&nbsp;indent &nbsp;·&nbsp;
+      <kbd>⇧Tab</kbd>&nbsp;unindent &nbsp;·&nbsp;
+      <kbd>⌫</kbd>&nbsp;remove empty
+    </footer>
+  </div>
+
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <script type="module" src="{{ site.baseurl }}/assets/js/app.js"></script>
+</body>
+</html>

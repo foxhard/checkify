@@ -1,0 +1,45 @@
+services:
+  jekyll:
+    build: .
+    ports:
+      - "4000:4000"
+      - "35729:35729"
+    volumes:
+      - .:/srv/jekyll
+      - bundle_cache:/usr/local/bundle
+    environment:
+      - JEKYLL_ENV=development
+    stdin_open: true
+    tty: true
+
+  node-test:
+    image: node:20-alpine
+    working_dir: /srv/app
+    volumes:
+      - .:/srv/app
+    command: node --test test/codec.test.js
+    profiles: ["test"]
+
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    working_dir: /srv/app
+    volumes:
+      - .:/srv/app
+      - /srv/app/node_modules   # keep container's Linux node_modules, not host's
+    depends_on:
+      - jekyll
+    environment:
+      - PLAYWRIGHT_BASE_URL=http://jekyll:4000
+    command: >
+      sh -c "
+        until curl -sf http://jekyll:4000/checkify/ > /dev/null 2>&1; do
+          echo 'Waiting for Jekyll...'; sleep 3;
+        done &&
+        npx playwright test
+      "
+    profiles: ["e2e"]
+
+volumes:
+  bundle_cache:

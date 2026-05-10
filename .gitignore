@@ -1,0 +1,96 @@
+# Jekyll build output
+_site/
+.jekyll-cache/
+.jekyll-metadata
+
+# Bundler
+.bundle/
+vendor/
+
+# Keep Gemfile.lock for reproducible builds — remove this line if you
+# prefer not to commit it (common for libraries, less common for apps)
+# Gemfile.lock
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+playwright-report/
+test-results/
+
+# ==========================
+# AI Tools & Assistants
+# ==========================
+
+# Anthropic / Claude
+CLAUDE.md
+.claude/
+claude.json
+
+# OpenAI / ChatGPT / Codex
+.openai/
+openai.json
+chatgpt.md
+CHATGPT.md
+
+# GitHub Copilot
+.copilot/
+.github/copilot-instructions.md
+copilot-instructions.md
+
+# Cursor AI
+.cursor/
+.cursorignore
+.cursorindexingignore
+cursor.json
+CURSOR.md
+
+# Windsurf (Codeium)
+.windsurf/
+windsurf.json
+WINDSURF.md
+.codeium/
+
+# Cody (Sourcegraph)
+.cody/
+cody.json
+
+# Tabnine
+.tabnine/
+tabnine.json
+.tabninerc
+
+# Amazon CodeWhisperer / Q
+.aws/codewhisperer/
+.amazonq/
+
+# Google Gemini / Duet AI
+.gemini/
+gemini.json
+GEMINI.md
+.duetai/
+
+# Aider
+.aider*
+aider.conf.yml
+AIDER.md
+
+# Continue.dev
+.continue/
+
+# Supermaven
+.supermaven/
+
+# Pieces
+.pieces/
+
+# JetBrains AI Assistant
+.jetbrains/ai/
+
+# General AI/LLM catch-all
+*.ai-context
+*.llm-context
+AI_NOTES.md
+AI_CONTEXT.md
+.ai/

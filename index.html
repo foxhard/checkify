@@ -1,0 +1,160 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self'; base-uri 'self'; form-action 'none'">
+  <title>Checkify — Encrypted Shareable Checklists</title>
+  <meta name="description" content="Build nested checklists, encrypt them into a URL, share with anyone. No account, no server.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/style.css">
+</head>
+<body class="landing-body">
+
+  <div class="land-wrap">
+
+    <!-- ── Top bar ── -->
+    <header class="land-topbar">
+      <div class="logo">
+        <span class="logo-bracket">[</span><span class="logo-text">CHECKIFY</span><span class="logo-bracket">]</span>
+      </div>
+      <span class="land-version">v1.0</span>
+    </header>
+
+    <!-- ── Hero ── -->
+    <section class="land-hero">
+<h1 class="land-headline">
+        Encrypted shareable<br>checklists.
+      </h1>
+      <p class="land-sub">
+        Build nested lists in seconds. The URL <em>is</em> the checklist —<br>
+        no account, no server, no tracking.
+      </p>
+
+      <a href="{{ site.baseurl }}/app" class="land-cta-btn">
+        <span class="land-cta-prefix">$</span> new checklist
+      </a>
+    </section>
+
+    <!-- ── Live preview ── -->
+    <section class="land-preview" aria-label="Example checklist">
+      <div class="land-preview-chrome">
+        <div class="land-chrome-dots">
+          <span class="chrome-dot chrome-red"></span>
+          <span class="chrome-dot chrome-yellow"></span>
+          <span class="chrome-dot chrome-green"></span>
+        </div>
+        <span class="land-chrome-url">checkify.app/app#Xk9…</span>
+      </div>
+
+      <div class="land-preview-body">
+        <div class="land-preview-title-row">
+          <span class="land-preview-title" style="color:var(--branch-color)">Weekend Trip</span>
+          <div class="land-preview-global">
+            <div class="land-gbar"><div class="land-gfill" style="width:57%"></div></div>
+            <span class="land-gcount">4 / 7</span>
+          </div>
+        </div>
+
+        <!-- static tree -->
+        <div class="land-tree" role="presentation">
+
+          <div class="land-node" style="--d:0">
+            <span class="land-connector">├─ </span>
+            <span class="land-cb land-cb-checked" aria-hidden="true">✓</span>
+            <span class="land-lbl land-lbl-checked">Book hotel</span>
+          </div>
+
+          <div class="land-node" style="--d:0">
+            <span class="land-connector">├─ </span>
+            <span class="land-cb land-cb-checked" aria-hidden="true">✓</span>
+            <span class="land-lbl land-lbl-checked">Buy train tickets</span>
+          </div>
+
+          <div class="land-node" style="--d:0">
+            <span class="land-connector">├─ </span>
+            <span class="land-cb" aria-hidden="true"></span>
+            <span class="land-lbl">Pack bags</span>
+          </div>
+
+          <div class="land-node" style="--d:0">
+            <span class="land-connector">└─ </span>
+            <span class="land-cb" aria-hidden="true"></span>
+            <span class="land-lbl land-lbl-branch">Groceries</span>
+            <span class="land-mini-progress">
+              <span class="land-mini-bar"><span class="land-mini-fill" style="width:33%"></span></span>
+              <span class="land-mini-count">1/3</span>
+            </span>
+          </div>
+
+          <div class="land-node" style="--d:1">
+            <span class="land-connector">├─ </span>
+            <span class="land-cb land-cb-checked" aria-hidden="true">✓</span>
+            <span class="land-lbl land-lbl-checked">Apples</span>
+          </div>
+
+          <div class="land-node" style="--d:1">
+            <span class="land-connector">├─ </span>
+            <span class="land-cb" aria-hidden="true"></span>
+            <span class="land-lbl">Milk</span>
+          </div>
+
+          <div class="land-node" style="--d:1">
+            <span class="land-connector">└─ </span>
+            <span class="land-cb" aria-hidden="true"></span>
+            <span class="land-lbl">Bread</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Features ── -->
+    <section class="land-features" aria-label="Features">
+      <div class="land-feat">
+        <span class="land-feat-icon">🔒</span>
+        <div>
+          <strong>Private or public</strong>
+          <p>Password-protect with AES-256 encryption, or share openly. You control the key.</p>
+        </div>
+      </div>
+      <div class="land-feat">
+        <span class="land-feat-icon">🔗</span>
+        <div>
+          <strong>The URL is the data</strong>
+          <p>Nothing is stored on a server. The encrypted checklist lives in the link.</p>
+        </div>
+      </div>
+      <div class="land-feat">
+        <span class="land-feat-icon">📋</span>
+        <div>
+          <strong>Two-level structure</strong>
+          <p>Top-level items with one level of children, inline progress bars per parent. Ideal for trips, projects, groceries.</p>
+        </div>
+      </div>
+      <div class="land-feat">
+        <span class="land-feat-icon">⚡</span>
+        <div>
+          <strong>Live URL sync</strong>
+          <p>The link updates as you type. Share the tab or bookmark it — your state is always in the URL.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Bottom CTA ── -->
+    <section class="land-bottom-cta">
+      <a href="{{ site.baseurl }}/app" class="land-cta-btn">
+        <span class="land-cta-prefix">$</span> new checklist
+      </a>
+      <p class="land-footer-note">No sign-up. Works offline after first load. Open source.</p>
+    </section>
+
+  </div>
+
+</body>
+</html>

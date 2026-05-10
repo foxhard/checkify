@@ -1,0 +1,10 @@
+FROM mcr.microsoft.com/playwright:v1.52.0-noble
+
+WORKDIR /srv/app
+
+# Install node deps — cached layer, only re-runs when package files change
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Install Chromium + system deps — cached layer
+RUN npx playwright install --with-deps chromium

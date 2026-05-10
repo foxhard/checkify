@@ -1,0 +1,11 @@
+title: Checkify
+description: Encrypted shareable checklists
+baseurl: "/checkify"
+url: "https://foxhard.github.io"
+permalink: pretty
+exclude:
+  - Dockerfile
+  - docker-compose.yml
+  - Gemfile
+  - Gemfile.lock
+  - README.md

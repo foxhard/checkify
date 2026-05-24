@@ -367,7 +367,6 @@ function _makeNode(n, connector, idx) {
   } else {
     label.style.userSelect = 'none';
     label.style.cursor = 'default';
-    label.style.pointerEvents = 'none';
   }
   div.appendChild(label);
 

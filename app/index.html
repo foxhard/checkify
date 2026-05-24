@@ -35,6 +35,75 @@ layout: null
     </div>
   </div>
 
+  <!-- LIVE SHARING DIALOG -->
+  <div id="live-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="live-dialog-title">
+    <div class="modal-glass live-dialog-glass">
+      <div class="modal-header">
+        <span class="prompt-prefix">◉</span>
+        <h2 id="live-dialog-title">LIVE SHARING</h2>
+      </div>
+
+      <div id="live-error-banner" class="live-error-banner hidden" role="alert"></div>
+
+      <!-- Initiator section: generating URL + pasting token -->
+      <div id="live-init-section">
+        <div id="live-generating" class="live-status-row">
+          <span class="share-spinner" aria-label="Generating link">⟳</span>
+          <span class="live-status-text">Generating link…</span>
+        </div>
+        <div id="live-url-section" class="hidden">
+          <label class="field-label" for="live-share-url">Shareable Live URL</label>
+          <textarea id="live-share-url" class="url-textarea live-token-field" readonly rows="3" placeholder="Live URL will appear here…"></textarea>
+          <button id="live-copy-url" class="btn-primary wide">COPY URL</button>
+          <p id="live-copy-url-status" class="copy-status hidden">Copied!</p>
+        </div>
+        <div id="live-token-input-section" class="hidden">
+          <label class="field-label" for="live-answer-input">Acceptance Token</label>
+          <p class="field-hint">Paste the token you received from the other user.</p>
+          <textarea id="live-answer-input" class="url-textarea live-token-field" rows="3" placeholder="Paste token here…" spellcheck="false" autocomplete="off"></textarea>
+          <div id="live-token-error" class="modal-error hidden"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="live-connect-btn" class="btn-primary hidden" disabled>
+            <span class="btn-label">CONNECT</span>
+          </button>
+          <button id="live-cancel-init-btn" class="btn-ghost">CANCEL</button>
+        </div>
+      </div>
+
+      <!-- Acceptor section: showing acceptance token (yellow/pending state) -->
+      <div id="live-accept-section" class="hidden">
+        <p class="modal-hint">Share this token with the checklist owner to connect.</p>
+        <div id="live-accept-generating" class="live-status-row">
+          <span class="share-spinner" aria-label="Generating token">⟳</span>
+          <span class="live-status-text">Generating token…</span>
+        </div>
+        <div id="live-accept-token-section" class="hidden">
+          <label class="field-label" for="live-accept-token">Acceptance Token</label>
+          <textarea id="live-accept-token" class="url-textarea live-token-field" readonly rows="3" placeholder="Token will appear here…"></textarea>
+          <button id="live-copy-token" class="btn-primary wide">COPY TOKEN</button>
+          <p id="live-copy-token-status" class="copy-status hidden">Copied!</p>
+        </div>
+        <div class="modal-actions">
+          <button id="live-reject-btn" class="btn-danger hidden">REJECT</button>
+          <button id="live-continue-accept-btn" class="btn-ghost">CONTINUE</button>
+        </div>
+      </div>
+
+      <!-- Connected section: green state for both roles -->
+      <div id="live-connected-section" class="hidden">
+        <p class="modal-hint">Live session active. Changes sync in real time.</p>
+        <p id="live-connection-info" class="live-status-text live-connection-info"></p>
+        <p class="field-hint">Direct P2P — no server involved after connection.</p>
+        <div class="modal-actions">
+          <button id="live-disconnect-btn" class="btn-danger">DISCONNECT</button>
+          <button id="live-continue-connected-btn" class="btn-ghost">CONTINUE</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- MY LISTS PANEL -->
   <div id="lists-panel" class="panel hidden" role="complementary" aria-label="My checklists">
     <div class="panel-header">
@@ -115,6 +184,10 @@ layout: null
         <button id="btn-share" class="btn-primary" title="Share this checklist">
           <span class="btn-label">SHARE</span>
           <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="1" x2="8" y2="11"/><polyline points="4,5 8,1 12,5"/><line x1="2" y1="15" x2="14" y2="15"/></svg></span>
+        </button>
+        <button id="btn-live" class="btn-live hidden" title="Live sharing" data-live-state="idle">
+          <span class="btn-label">LIVE</span>
+          <span class="btn-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg></span>
         </button>
         <button id="btn-lists" class="btn-ghost" title="My checklists">
           <span class="btn-label">LISTS</span>

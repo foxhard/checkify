@@ -18,6 +18,7 @@ The technical side was just an excuse to experiment with how much you can cram i
 - Checkbox state updates the URL in real-time so shared progress stays current
 - New Checklist button — resets to a blank list from any mode, with a confirmation guard when work would be lost
 - Works offline after first load
+- Live sharing — real-time P2P sync via WebRTC DataChannel; no server after connection, copy-paste signaling, works across different networks
 - Dark terminal UI — icon-only buttons on mobile, full labels on desktop
 
 ---
@@ -62,6 +63,29 @@ Public lists skip the encryption step. The type byte at position 0 of the payloa
 - **Public** — anyone with the link can open it, no password required
 - **Protected** — recipient is prompted for the passphrase you set; encrypted with AES-128-GCM
 
+### Live sharing
+
+Live sharing lets two people check/uncheck items in real time via a direct peer-to-peer connection. No server is involved once the connection is established.
+
+**To start a session (initiator):**
+1. Save a checklist and enter RUNNING mode
+2. Click **LIVE** — the button appears in the header in running mode
+3. Wait a few seconds while the shareable Live URL is generated
+4. Copy the URL and send it to the other person
+5. Wait for them to paste their **Acceptance Token** back into the dialog
+6. Click **CONNECT** — the LIVE button turns green when connected
+
+**To join a session (acceptor):**
+1. Open the Live URL — the checklist loads automatically
+2. Wait for the **Acceptance Token** to appear (a few seconds)
+3. Copy the token and send it to the initiator
+4. Once the initiator connects, your LIVE button turns green
+5. Click **REJECT** at any time before connecting to decline
+
+While connected, checking or unchecking any item syncs to the other user instantly. Either person can disconnect by clicking the green LIVE button → **DISCONNECT**.
+
+The connection uses WebRTC DataChannel. Signaling (the initial handshake) is done entirely by copy-pasting two short tokens — no WebSocket server or relay is needed for signaling. A TURN relay server is used as a connectivity fallback for CGNAT and same-network scenarios.
+
 ---
 
 ## Running locally
@@ -100,6 +124,7 @@ docker compose down
 | `assets/js/codec.js` | Serialization, compression, encryption — pure, no DOM |
 | `assets/js/tree.js` | Node state machine and DOM rendering |
 | `assets/js/app.js` | UI orchestration, mode transitions, event wiring |
+| `assets/js/live.js` | WebRTC live sharing — peer connection lifecycle, SDP serialization, DataChannel messaging |
 | `assets/css/style.css` | All styles (design tokens, dark theme, components) |
 | `test/codec.test.js` | Unit tests for the encode/decode pipeline |
 | `Dockerfile` | Jekyll 4.2 dev image |
@@ -164,6 +189,7 @@ node --test test/codec.test.js
 - **Vanilla JS ES modules** — no bundler, no framework, no npm
 - **Web Crypto API** — AES-GCM encryption and PBKDF2 key derivation
 - **CompressionStream API** — deflate-raw compression, browser-native
+- **WebRTC DataChannel** — peer-to-peer real-time sync; STUN (Google) + TURN (Open Relay) for NAT traversal
 - **Docker** — local dev via `jekyll/jekyll:4.2.2`; Node 20 Alpine for tests
 - **GitHub Actions** — CI for codec unit tests
 

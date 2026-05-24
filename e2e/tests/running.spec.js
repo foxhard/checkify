@@ -7,6 +7,8 @@ async function setupList(page, title, items) {
   await page.keyboard.type(items[0]);
   for (let i = 1; i < items.length; i++) {
     await page.keyboard.press('Enter');
+    await expect(page.locator('.node-label')).toHaveCount(i + 1);
+    await page.locator('.node-label').nth(i).click();
     await page.keyboard.type(items[i]);
   }
   await page.locator('#btn-save').click();

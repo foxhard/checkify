@@ -8,6 +8,11 @@ import {
   moveNodeUp, moveNodeDown,
   syncAddChildButton,
 } from './tree.js';
+import {
+  decodePayload,
+  setLiveCallbacks, createOffer, finalizeConnection, createAnswer,
+  sendToggle, closeSession,
+} from './live.js';
 
 // ── App State ─────────────────────────────────────────────
 let APP_MODE         = 'editing';
@@ -23,6 +28,10 @@ let EDIT_SUBMODE     = 'visual'; // 'visual' | 'text'
 let _pendingBase64   = null;     // base64 data for protected list awaiting passphrase
 
 let currentChecklistId = null;
+
+let liveState  = 'idle';   // 'idle' | 'pending' | 'connected'
+let isLiveOpen = false;
+let _liveRole  = null;     // 'initiator' | 'acceptor'
 
 const LS_PREFIX = 'checkify_';
 
@@ -97,6 +106,16 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   setMutationCallback(afterMutation);
+  setLiveCallbacks({ onConnected: _onLiveConnected, onMessage: _onLiveMessage, onDisconnect: _onLiveDisconnect, onError: _onLiveError });
+
+  // Acceptor path: ?share= param present in URL
+  const shareParam = new URLSearchParams(location.search).get('share');
+  if (shareParam) {
+    history.replaceState(null, '', location.pathname);
+    wireEvents();
+    await _handleAcceptorLoad(shareParam);
+    return;
+  }
 
   const rawHash = window.location.hash.slice(1);
   const { id, data } = _splitHashId(rawHash);
@@ -284,6 +303,7 @@ function enterEditingMode() {
   setReadOnly(false);
   _showEditorModeBtns();
   _show('hint-bar');
+  document.getElementById('btn-live')?.classList.add('hidden');
   _syncTitleGate();
 }
 
@@ -305,6 +325,7 @@ function enterRunningMode() {
   setReadOnly(true);
   _hideEditorModeBtns();
   _hide('hint-bar');
+  document.getElementById('btn-live')?.classList.remove('hidden');
 }
 
 const enterEditMode = enterEditingMode;
@@ -698,11 +719,18 @@ async function handleSave() {
 // ── Event Delegation on tree-root ─────────────────────────
 
 function handleTreeClick(e) {
-  if (e.target.classList.contains('node-checkbox')) {
+  const isCheckbox = e.target.classList.contains('node-checkbox');
+  const isLabel    = APP_MODE === 'running' && e.target.classList.contains('node-label');
+  if (isCheckbox || isLabel) {
     const nodeEl = e.target.closest('[data-id]');
     if (nodeEl) {
-      toggleNode(nodeEl.dataset.id);
+      const id = nodeEl.dataset.id;
+      toggleNode(id);
       afterMutation(true);
+      if (liveState === 'connected') {
+        const n = getNodes().find(n => n.id === id);
+        if (n) sendToggle(n.id, n.type === 'x');
+      }
     }
     return;
   }
@@ -827,6 +855,10 @@ function _focusNode(id) {
 // ── New Checklist ─────────────────────────────────────────
 
 function _resetToBlank() {
+  closeSession();
+  _setLiveState('idle');
+  _liveRole = null;
+  closeLiveDialog();
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   currentChecklistId = null;
   hasExistingList    = false;
@@ -853,9 +885,281 @@ function handleNewChecklist() {
   _resetToBlank();
 }
 
+// ── Live Session ──────────────────────────────────────────
+
+function _setLiveState(state) {
+  liveState = state;
+  const btn = document.getElementById('btn-live');
+  if (btn) btn.setAttribute('data-live-state', state);
+}
+
+function openLiveDialog() {
+  document.getElementById('live-dialog')?.classList.remove('hidden');
+  isLiveOpen = true;
+}
+
+function closeLiveDialog() {
+  document.getElementById('live-dialog')?.classList.add('hidden');
+  isLiveOpen = false;
+  document.getElementById('live-error-banner')?.classList.add('hidden');
+}
+
+function _showLiveError(msg) {
+  const banner = document.getElementById('live-error-banner');
+  if (!banner) return;
+  banner.textContent = msg;
+  banner.classList.remove('hidden');
+}
+
+function _showLiveSection(sectionId) {
+  ['live-init-section', 'live-accept-section', 'live-connected-section'].forEach(id => {
+    document.getElementById(id)?.classList.toggle('hidden', id !== sectionId);
+  });
+}
+
+function handleLiveBtnClick() {
+  if (liveState === 'idle') {
+    _showLiveSection('live-init-section');
+    openLiveDialog();
+    handleLiveInitiate();
+  } else if (liveState === 'pending') {
+    _showLiveSection('live-accept-section');
+    openLiveDialog();
+  } else if (liveState === 'connected') {
+    _showLiveSection('live-connected-section');
+    openLiveDialog();
+  }
+}
+
+async function handleLiveInitiate() {
+  document.getElementById('live-generating')?.classList.remove('hidden');
+  document.getElementById('live-url-section')?.classList.add('hidden');
+  document.getElementById('live-token-input-section')?.classList.add('hidden');
+  document.getElementById('live-token-error')?.classList.add('hidden');
+  document.getElementById('live-connect-btn')?.classList.add('hidden');
+
+  const nodes = getNodes();
+  const checklistData = {
+    title: _getTitle(),
+    items: nodes.map(n => ({ id: n.id, text: n.label, checked: n.type === 'x' })),
+  };
+
+  let encoded;
+  try {
+    encoded = await createOffer(checklistData);
+  } catch (err) {
+    document.getElementById('live-generating')?.classList.add('hidden');
+    document.getElementById('live-token-input-section')?.classList.remove('hidden');
+    const errEl = document.getElementById('live-token-error');
+    if (errEl) {
+      errEl.textContent = err.message === 'TOO_LARGE'
+        ? 'This checklist is too large to share live.'
+        : 'Failed to generate link. Please try again.';
+      errEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  document.getElementById('live-generating')?.classList.add('hidden');
+  const urlEl = document.getElementById('live-share-url');
+  if (urlEl) urlEl.value = location.origin + location.pathname + '?share=' + encoded;
+  document.getElementById('live-url-section')?.classList.remove('hidden');
+  document.getElementById('live-token-input-section')?.classList.remove('hidden');
+  document.getElementById('live-connect-btn')?.classList.remove('hidden');
+  _liveRole = 'initiator';
+}
+
+async function handleLiveConnect() {
+  const tokenInput = document.getElementById('live-answer-input');
+  const errEl      = document.getElementById('live-token-error');
+  const connectBtn = document.getElementById('live-connect-btn');
+  const token      = tokenInput?.value?.trim();
+  if (!token) return;
+
+  if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+  if (connectBtn) {
+    connectBtn.disabled = true;
+    connectBtn.querySelector('.btn-label').textContent = 'CONNECTING…';
+  }
+
+  try {
+    await finalizeConnection(token);
+  } catch (err) {
+    if (errEl) {
+      errEl.textContent = err.message === 'NOT_AN_ANSWER'
+        ? 'This looks like a share URL, not an Acceptance Token. Please paste the token from the other user.'
+        : 'Invalid token. Please check and try again.';
+      errEl.classList.remove('hidden');
+    }
+    if (connectBtn) {
+      connectBtn.disabled = false;
+      connectBtn.querySelector('.btn-label').textContent = 'CONNECT';
+    }
+  }
+}
+
+function handleLiveReject() {
+  if (!confirm('Cancel live session? The checklist will return to edit mode.')) return;
+  closeLiveDialog();
+  _resetToBlank();
+}
+
+function handleLiveDisconnect() {
+  if (!confirm('Are you sure? Both users will be disconnected.')) return;
+  closeLiveDialog();
+  closeSession();
+  _setLiveState('idle');
+  _liveRole = null;
+  _show('btn-new');
+  enterEditingMode();
+}
+
+function _onLiveConnected() {
+  console.log('[app] _onLiveConnected fired, liveRole=', _liveRole);
+  _setLiveState('connected');
+  closeLiveDialog();
+  if (APP_MODE !== 'running') enterRunningMode();
+  _hide('btn-edit');
+  _hide('btn-new');
+  _hide('btn-share');
+  const info = document.getElementById('live-connection-info');
+  if (info) info.textContent = _liveRole === 'initiator' ? 'You are the session host.' : 'You joined as a participant.';
+}
+
+function _onLiveMessage(msg) {
+  if (msg.type !== 'item_toggle') return;
+  const node = getNodes().find(n => n.id === msg.item_id);
+  if (!node) return;
+  if ((node.type === 'x') !== msg.checked) {
+    toggleNode(msg.item_id);
+  }
+  afterMutation();
+}
+
+function _onLiveDisconnect() {
+  console.log('[app] _onLiveDisconnect fired');
+  _setLiveState('idle');
+  _liveRole = null;
+  closeLiveDialog();
+  _show('btn-new');
+  enterEditingMode();
+}
+
+function _onLiveError(reason) {
+  console.warn('[app] _onLiveError fired, reason=', reason);
+  _setLiveState('idle');
+  _liveRole = null;
+  _show('btn-new');
+  const connectBtn = document.getElementById('live-connect-btn');
+  if (connectBtn) {
+    connectBtn.disabled = false;
+    connectBtn.querySelector('.btn-label').textContent = 'CONNECT';
+  }
+  const msg = reason === 'CONNECTION_FAILED'
+    ? 'Connection failed. The two peers could not reach each other. Both users should start over.'
+    : 'Channel error. The data connection was interrupted.';
+  _showLiveError(msg);
+}
+
+async function _handleAcceptorLoad(sharePayload) {
+  let payload;
+  try {
+    payload = await decodePayload(sharePayload);
+  } catch {
+    enterEditingMode();
+    _loadAndInit();
+    return;
+  }
+
+  if (!payload?.checklist || !payload?.sdp) {
+    enterEditingMode();
+    _loadAndInit();
+    return;
+  }
+
+  const { checklist, sdp } = payload;
+  const treeItems = (checklist.items || []).map(item => ({
+    id: item.id || crypto.randomUUID(),
+    depth: 0,
+    type: item.checked ? 'x' : ' ',
+    label: item.text || '',
+  }));
+  _setTitle(checklist.title || '');
+  initTree(treeItems, true);
+  hasExistingList    = true;
+  currentChecklistId = null;
+  _liveRole          = 'acceptor';
+  enterRunningMode();
+  _hide('btn-edit');
+  _hide('btn-new');
+  _hide('btn-share');
+
+  _showLiveSection('live-accept-section');
+  document.getElementById('live-accept-generating')?.classList.remove('hidden');
+  document.getElementById('live-accept-token-section')?.classList.add('hidden');
+  document.getElementById('live-reject-btn')?.classList.add('hidden');
+  document.getElementById('live-continue-accept-btn').disabled = true;
+  openLiveDialog();
+
+  let answerToken;
+  try {
+    const result = await createAnswer(sdp);
+    answerToken = result.answerToken;
+  } catch {
+    document.getElementById('live-accept-generating')?.classList.add('hidden');
+    document.getElementById('live-reject-btn')?.classList.remove('hidden');
+    document.getElementById('live-continue-accept-btn').disabled = false;
+    _showLiveError('Failed to prepare live session. The share link may be invalid or expired.');
+    return;
+  }
+
+  document.getElementById('live-reject-btn')?.classList.remove('hidden');
+  document.getElementById('live-continue-accept-btn').disabled = false;
+  document.getElementById('live-accept-generating')?.classList.add('hidden');
+  const tokenField = document.getElementById('live-accept-token');
+  if (tokenField) tokenField.value = answerToken;
+  document.getElementById('live-accept-token-section')?.classList.remove('hidden');
+  _setLiveState('pending');
+}
+
 // ── Wire Events ───────────────────────────────────────────
 
 function wireEvents() {
+  // Live sharing
+  document.getElementById('btn-live')?.addEventListener('click', handleLiveBtnClick);
+  document.getElementById('live-connect-btn')?.addEventListener('click', handleLiveConnect);
+  document.getElementById('live-cancel-init-btn')?.addEventListener('click', () => {
+    closeSession();
+    _setLiveState('idle');
+    _liveRole = null;
+    closeLiveDialog();
+  });
+  document.getElementById('live-answer-input')?.addEventListener('input', () => {
+    const connectBtn = document.getElementById('live-connect-btn');
+    const val = document.getElementById('live-answer-input')?.value?.trim();
+    if (connectBtn) connectBtn.disabled = !val;
+  });
+  document.getElementById('live-copy-url')?.addEventListener('click', async () => {
+    const url = document.getElementById('live-share-url')?.value?.trim();
+    if (!url) return;
+    try { await navigator.clipboard.writeText(url); }
+    catch { document.getElementById('live-share-url')?.select(); document.execCommand('copy'); }
+    const s = document.getElementById('live-copy-url-status');
+    if (s) { s.classList.remove('hidden'); setTimeout(() => s.classList.add('hidden'), 2000); }
+  });
+  document.getElementById('live-copy-token')?.addEventListener('click', async () => {
+    const tok = document.getElementById('live-accept-token')?.value?.trim();
+    if (!tok) return;
+    try { await navigator.clipboard.writeText(tok); }
+    catch { document.getElementById('live-accept-token')?.select(); document.execCommand('copy'); }
+    const s = document.getElementById('live-copy-token-status');
+    if (s) { s.classList.remove('hidden'); setTimeout(() => s.classList.add('hidden'), 2000); }
+  });
+  document.getElementById('live-reject-btn')?.addEventListener('click', handleLiveReject);
+  document.getElementById('live-continue-accept-btn')?.addEventListener('click', closeLiveDialog);
+  document.getElementById('live-disconnect-btn')?.addEventListener('click', handleLiveDisconnect);
+  document.getElementById('live-continue-connected-btn')?.addEventListener('click', closeLiveDialog);
+
   // Header
   document.getElementById('btn-share')?.addEventListener('click', openSharePanel);
   document.getElementById('btn-lists')?.addEventListener('click', openListsPanel);
@@ -944,6 +1248,7 @@ function wireEvents() {
   // Escape closes any open panel
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (isLiveOpen) closeLiveDialog();
       if (isShareOpen) closeSharePanel();
       if (isListsOpen) closeListsPanel();
     }

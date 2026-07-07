@@ -11,7 +11,7 @@ import {
 import {
   decodePayload,
   setLiveCallbacks, createOffer, finalizeConnection, createAnswer,
-  sendToggle, closeSession,
+  sendToggle, closeSession, getState as getLiveSessionState,
 } from './live.js';
 
 // ── App State ─────────────────────────────────────────────
@@ -887,10 +887,32 @@ function handleNewChecklist() {
 
 // ── Live Session ──────────────────────────────────────────
 
+// Screen Wake Lock: held while a live session is pending so the acceptor's
+// screen can't lock mid-exchange — Android suspends hidden/locked tabs, which
+// freezes the pending RTCPeerConnection and kills its TURN allocation.
+// The browser auto-releases the lock when the tab is hidden; wireEvents
+// re-acquires it on visibilitychange while a session is still pending.
+let _wakeLock = null;
+
+async function _acquireWakeLock() {
+  if (!('wakeLock' in navigator) || _wakeLock) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  } catch { /* denied (battery saver) or tab hidden — dialog hint covers this */ }
+}
+
+function _releaseWakeLock() {
+  _wakeLock?.release().catch(() => {});
+  _wakeLock = null;
+}
+
 function _setLiveState(state) {
   liveState = state;
   const btn = document.getElementById('btn-live');
   if (btn) btn.setAttribute('data-live-state', state);
+  if (state === 'pending') _acquireWakeLock();
+  else _releaseWakeLock();
 }
 
 function openLiveDialog() {
@@ -967,6 +989,7 @@ async function handleLiveInitiate() {
   document.getElementById('live-token-input-section')?.classList.remove('hidden');
   document.getElementById('live-connect-btn')?.classList.remove('hidden');
   _liveRole = 'initiator';
+  _acquireWakeLock(); // released by _setLiveState on connect/cancel/error
 }
 
 async function handleLiveConnect() {
@@ -1155,6 +1178,31 @@ function wireEvents() {
     const s = document.getElementById('live-copy-token-status');
     if (s) { s.classList.remove('hidden'); setTimeout(() => s.classList.add('hidden'), 2000); }
   });
+  // Re-acquire the wake lock after the user returns from the share sheet or
+  // another app — the browser drops it automatically when the tab hides.
+  document.addEventListener('visibilitychange', () => {
+    const s = getLiveSessionState();
+    if (document.visibilityState === 'visible' && (s === 'offer_pending' || s === 'answer_pending')) {
+      _acquireWakeLock();
+    }
+  });
+  // OS share sheet buttons — only shown where the Web Share API exists.
+  if (navigator.share) {
+    const shareUrlBtn = document.getElementById('live-share-url-btn');
+    const shareTokBtn = document.getElementById('live-share-token-btn');
+    shareUrlBtn?.classList.remove('hidden');
+    shareTokBtn?.classList.remove('hidden');
+    shareUrlBtn?.addEventListener('click', async () => {
+      const url = document.getElementById('live-share-url')?.value?.trim();
+      if (!url) return;
+      try { await navigator.share({ title: 'Checkify live checklist', url }); } catch { /* user dismissed sheet */ }
+    });
+    shareTokBtn?.addEventListener('click', async () => {
+      const tok = document.getElementById('live-accept-token')?.value?.trim();
+      if (!tok) return;
+      try { await navigator.share({ text: tok }); } catch { /* user dismissed sheet */ }
+    });
+  }
   document.getElementById('live-reject-btn')?.addEventListener('click', handleLiveReject);
   document.getElementById('live-continue-accept-btn')?.addEventListener('click', closeLiveDialog);
   document.getElementById('live-disconnect-btn')?.addEventListener('click', handleLiveDisconnect);

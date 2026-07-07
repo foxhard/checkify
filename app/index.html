@@ -55,7 +55,9 @@ layout: null
           <label class="field-label" for="live-share-url">Shareable Live URL</label>
           <textarea id="live-share-url" class="url-textarea live-token-field" readonly rows="3" placeholder="Live URL will appear here…"></textarea>
           <button id="live-copy-url" class="btn-primary wide">COPY URL</button>
+          <button id="live-share-url-btn" class="btn-ghost wide hidden">SHARE URL…</button>
           <p id="live-copy-url-status" class="copy-status hidden">Copied!</p>
+          <p class="field-hint">Send this link to one other person. Don't generate a new link after they've opened it — each link works only once.</p>
         </div>
         <div id="live-token-input-section" class="hidden">
           <label class="field-label" for="live-answer-input">Acceptance Token</label>
@@ -82,7 +84,9 @@ layout: null
           <label class="field-label" for="live-accept-token">Acceptance Token</label>
           <textarea id="live-accept-token" class="url-textarea live-token-field" readonly rows="3" placeholder="Token will appear here…"></textarea>
           <button id="live-copy-token" class="btn-primary wide">COPY TOKEN</button>
+          <button id="live-share-token-btn" class="btn-ghost wide hidden">SHARE TOKEN…</button>
           <p id="live-copy-token-status" class="copy-status hidden">Copied!</p>
+          <p class="field-hint">⚠ Keep this tab open and your screen on until connected — switching apps or locking the screen can break the pending session.</p>
         </div>
         <div class="modal-actions">
           <button id="live-reject-btn" class="btn-danger hidden">REJECT</button>

@@ -71,20 +71,23 @@ Live sharing lets two people check/uncheck items in real time via a direct peer-
 1. Save a checklist and enter RUNNING mode
 2. Click **LIVE** — the button appears in the header in running mode
 3. Wait a few seconds while the shareable Live URL is generated
-4. Copy the URL and send it to the other person
+4. Copy the URL (or use **SHARE URL…** on mobile) and send it to the other person — each link works only once; don't generate a new one after they've opened it
 5. Wait for them to paste their **Acceptance Token** back into the dialog
 6. Click **CONNECT** — the LIVE button turns green when connected
 
 **To join a session (acceptor):**
 1. Open the Live URL — the checklist loads automatically
 2. Wait for the **Acceptance Token** to appear (a few seconds)
-3. Copy the token and send it to the initiator
-4. Once the initiator connects, your LIVE button turns green
-5. Click **REJECT** at any time before connecting to decline
+3. Copy the token (or use **SHARE TOKEN…** on mobile) and send it to the initiator
+4. **Keep the tab open and your screen on until connected** — see the note below
+5. Once the initiator connects, your LIVE button turns green
+6. Click **REJECT** at any time before connecting to decline
+
+> **On mobile, stay in the tab while the session is pending.** Android suspends background and locked-screen tabs, which silently kills the half-open connection — the initiator's CONNECT will then always time out. The app holds a screen wake lock during the pending phase so your screen won't turn off by itself, but switching to another app for more than a moment can still break the handshake. Send the token, then come straight back.
 
 While connected, checking or unchecking any item syncs to the other user instantly. Either person can disconnect by clicking the green LIVE button → **DISCONNECT**.
 
-The connection uses WebRTC DataChannel. Signaling (the initial handshake) is done entirely by copy-pasting two short tokens — no WebSocket server or relay is needed for signaling. A TURN relay server is used as a connectivity fallback for CGNAT and same-network scenarios.
+The connection uses WebRTC DataChannel. Signaling (the initial handshake) is done entirely by copy-pasting two short tokens — no WebSocket server or relay is needed for signaling. STUN and a TURN relay server are used for NAT traversal, so it works across different networks, behind CGNAT, and on the same LAN.
 
 ---
 
@@ -190,6 +193,7 @@ node --test test/codec.test.js
 - **Web Crypto API** — AES-GCM encryption and PBKDF2 key derivation
 - **CompressionStream API** — deflate-raw compression, browser-native
 - **WebRTC DataChannel** — peer-to-peer real-time sync; STUN (Google) + TURN (Open Relay) for NAT traversal
+- **Screen Wake Lock + Web Share APIs** — keep pending live sessions alive on mobile and hand off links/tokens via the OS share sheet
 - **Docker** — local dev via `jekyll/jekyll:4.2.2`; Node 20 Alpine for tests
 - **GitHub Actions** — CI for codec unit tests
 
